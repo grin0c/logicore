@@ -1,0 +1,45 @@
+{
+  "name": "logicore",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "NODE_ENV=test jest --runInBand"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alevkon/logicore.git"
+  },
+  "keywords": [
+    "business",
+    "logic",
+    "core",
+    "orm"
+  ],
+  "author": "alevkon@gmail.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/alevkon/logicore/issues"
+  },
+  "homepage": "https://github.com/alevkon/logicore#readme",
+  "dependencies": {
+    "lodash": "^4.17.10"
+  },
+  "devDependencies": {
+    "jest": "^23.4.2"
+  },
+  "jest": {
+    "verbose": true,
+    "testURL": "http://localhost",
+    "moduleDirectories": [
+      "node_modules",
+      "lib"
+    ],
+    "globals": {
+      "NODE_ENV": "test"
+    },
+    "moduleFileExtensions": [
+      "js"
+    ]
+  }
+}
