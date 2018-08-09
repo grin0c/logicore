@@ -8,6 +8,7 @@ module.exports = class Adapter {
   constructor() {
     this.calls = [];
     this.instances = {};
+    this.idPool = {};
     this.schemas = {};
   }
 
@@ -21,11 +22,18 @@ module.exports = class Adapter {
     this.instances[schemaKey] = INSTANCES[schemaKey]
       ? _.clone(INSTANCES[schemaKey])
       : [];
+    this.idPool[schemaKey] = _.reduce(this.instances[schemaKey], (nextFreeId, instance) => {
+      if (Number(instance.id) >= nextFreeId) {
+        return Number(instance.id) + 1;
+      }
+      return nextFreeId;
+    }, 1);
     this.schemas[schemaKey] = schema;
   }
 
   async insert(schemaKey, data) {
     const instances = this.instances[schemaKey];
+    data.id = this.idPool[schemaKey]++;
     instances.push(data);
   }
 

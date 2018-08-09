@@ -1,7 +1,8 @@
-const Action = require('../lib/Action');
-const Adapter = require('./fixtures/Adapter');
-const Core = require('../lib/Core');
 const Person = require("./fixtures/Person.js");
+const Adapter = require('./fixtures/Adapter');
+const Action = require('../lib/Action');
+const Event = require('../lib/Event');
+const Core = require('../lib/Core');
 
 const createCore = async() => {
   const core = new Core({
@@ -141,7 +142,23 @@ describe('Action', () => {
   describe('populateWithOld', () => {
     const testCases = [
       {
-        title: "Update",
+        title: "INSERT",
+        blank: {
+          type: Action.ACTION_TYPE.INSERT,
+          schemaKey: "person",
+          data: {
+            nameFirst: "Rudy",
+            age: 40
+          }
+        },
+        populated: {
+          dataOld: null,
+          dataDiff: null
+        },
+        dbLogEvents: []
+      },
+      {
+        title: "UPDATE",
         blank: {
           type: Action.ACTION_TYPE.UPDATE,
           instanceId: 1,
@@ -162,11 +179,86 @@ describe('Action', () => {
             age: 40
           }
         },
-        dbLogs: [
-          {  }
+        dbLogEvents: [
+          {
+            id: 1,
+            action: 1,
+            stage: 1,
+            isError: false,
+            inData: { instanceId: 1, instanceFilter: null, data: { nameFirst: 'Rudy', age: 40 } },
+            outData: {
+              dataOld: { id: 1, nameFirst: 'Rudy', nameLast: 'Cruysbergs', age: 30 },
+              dataDiff: { age: 40 }
+            },
+            errorMessage: ''
+          }
+        ]
+      },
+      {
+        title: "UPDATE with non-existing",
+        blank: {
+          type: Action.ACTION_TYPE.UPDATE,
+          instanceId: 10000,
+          schemaKey: "person",
+          data: {
+            age: 40
+          }
+        },
+        error: /^Item not found/,
+        dbLogEvents: [
+          {
+            id: 1,
+            action: 1,
+            stage: 1,
+            isError: true,
+            errorMessage: 'Item not found {"id":10000}',
+            inData: { instanceId: 10000, instanceFilter: null, data: { age: 40 } },
+            outData: {}
+          }
+        ]
+      },
+      {
+        title: "UPSERT",
+        blank: {
+          type: Action.ACTION_TYPE.UPSERT,
+          instanceFilter: { age: 30 },
+          schemaKey: "person",
+          data: {
+            nameFirst: "Rudy2",
+            age: 30,
+            nonExistingAttribute: 10
+          }
+        },
+        populated: {
+          dataOld: {
+            id: 1,
+            nameFirst: "Rudy",
+            nameLast: "Cruysbergs",
+            age: 30
+          },
+          dataDiff: {
+            nameFirst: "Rudy2"
+          }
+        },
+        dbLogEvents: [
+          {
+            id: 1,
+            action: 1,
+            stage: 1,
+            isError: false,
+            inData: { instanceId: null, instanceFilter: { age: 30 }, data: { nameFirst: 'Rudy2', age: 30, nonExistingAttribute: 10 } },
+            outData: {
+              dataOld: { id: 1, nameFirst: 'Rudy', nameLast: 'Cruysbergs', age: 30 },
+              dataDiff: { nameFirst: "Rudy2" }
+            },
+            errorMessage: ''
+          }
         ]
       }
     ];
+
+
+    // TODO: test failed action creatiion in CORE (proper events)
 
     testCases.forEach(async (testCase) => {
       it(testCase.title, async() => {
@@ -175,9 +267,16 @@ describe('Action', () => {
         const action = new Action(testCase.blank);
         await core.logger.logAction(action);
 
-        await action.populateWithOld(core);
+        if (testCase.error) {
+          await expect(action.populateWithOld(core)).rejects.toThrow(testCase.error);
+        } else {
+          await action.populateWithOld(core);
+          expect(action.dataOld).toStrictEqual(testCase.populated.dataOld);
+        }
 
-        expect(action.dataOld).toStrictEqual(testCase.populated.dataOld);
+        expect(core.logger.adapter.instances.event).toStrictEqual(
+          testCase.dbLogEvents.map(eventBlank => new Event(eventBlank))
+        );
       });
     });
   })
