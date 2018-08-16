@@ -14,9 +14,17 @@ module.exports = {
         type: "string",
         description: "Last name"
       },
+      nameFull: {
+        type: "string",
+        description: "Full name"
+      },
       age: {
         type: "integer",
         description: "Age"
+      },
+      summary: {
+        type: "string",
+        description: "nameFull, age"
       }
     }
   },

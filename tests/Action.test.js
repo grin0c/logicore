@@ -257,9 +257,7 @@ describe('Action', () => {
       }
     ];
 
-
-    // TODO: test failed action creatiion in CORE (proper events)
-
+    // TODO: test failed action creation in CORE (proper events)
     testCases.forEach(async (testCase) => {
       it(testCase.title, async() => {
         const core = await createCore();
@@ -272,6 +270,583 @@ describe('Action', () => {
         } else {
           await action.populateWithOld(core);
           expect(action.dataOld).toStrictEqual(testCase.populated.dataOld);
+        }
+
+        expect(core.logger.adapter.instances.event).toStrictEqual(
+          testCase.dbLogEvents.map(eventBlank => new Event(eventBlank))
+        );
+      });
+    });
+  });
+
+  describe('prepatch', () => {
+    const testCases = [
+      {
+        title: "INSERT array condition",
+        blank: {
+          type: Action.ACTION_TYPE.INSERT,
+          schemaKey: "person",
+          data: {
+            nameFirst: "Rudy",
+            nameLast: "Cruysbergs",
+            age: 40
+          }
+        },
+        triggers: [
+          {
+            key: "T1",
+            condition: ["nameFirst"],
+            patch: (action, instance) => ({
+              nameFull: `${instance.nameFirst} ${instance.nameLast || ""}`.trim()
+            })
+          }
+        ],
+        dataDiffPrepatched: {
+          nameFirst: "Rudy",
+          nameLast: "Cruysbergs",
+          nameFull: "Rudy Cruysbergs",
+          age: 40
+        },
+        dbLogEvents: [
+          {
+            id: 1,
+            action: 1,
+            stage: 2,
+            isError: false,
+            inData: {
+              trigger: 'T1',
+              v: 1,
+              depth: 0,
+              data: {
+                nameFirst: "Rudy",
+                nameLast: "Cruysbergs",
+                age: 40
+              },
+              dataDiff: null,
+              dataDiffPrepatched: null,
+              dataOld: null
+            },
+            outData: { conditionResult: true },
+            errorMessage: ''
+          },
+          {
+            id: 2,
+            action: 1,
+            stage: 3,
+            isError: false,
+            inData: {
+              trigger: 'T1',
+              v: 1,
+              depth: 0,
+              data: {
+                nameFirst: "Rudy",
+                nameLast: "Cruysbergs",
+                age: 40
+              },
+              dataDiff: null,
+              dataDiffPrepatched: null,
+              dataOld: null
+            },
+            outData: {
+              triggerPatch: {
+                nameFull: "Rudy Cruysbergs"
+              }
+            },
+            errorMessage: ''
+          }
+        ]
+      },
+      {
+        title: "UPDATE function condition",
+        blank: {
+          type: Action.ACTION_TYPE.UPDATE,
+          schemaKey: "person",
+          instanceId: 1,
+          data: {
+            nameFull: "Rudy Alan Cruysbergs"
+          }
+        },
+        triggers: [
+          {
+            key: "T1",
+            condition: action => action.getFreshestDiff().hasOwnProperty("nameFull"),
+            patch: (action, instance) => {
+              const parts = instance.nameFull.split(/\s/);
+              return {
+                nameFirst: parts.slice(0, parts.length - 1).join(" "),
+                nameLast: parts[parts.length - 1]
+              }
+            }
+          }
+        ],
+        dataDiffPrepatched: {
+          nameFirst: "Rudy Alan",
+          nameFull: "Rudy Alan Cruysbergs"
+        },
+        dbLogEvents: [
+          {
+            id: 1,
+            action: 1,
+            stage: 1,
+            isError: false,
+            errorMessage: '',
+            inData: { instanceId: 1, instanceFilter: null, data: { nameFull: "Rudy Alan Cruysbergs" } },
+            outData: {
+              "dataDiff": {
+                "nameFull": "Rudy Alan Cruysbergs"
+              },
+              "dataOld": {
+                "age": 30,
+                "id": 1,
+                "nameFirst": "Rudy",
+                "nameLast": "Cruysbergs"
+              }
+            }
+          },
+          {
+            id: 2,
+            action: 1,
+            stage: 2,
+            isError: false,
+            inData: {
+              trigger: 'T1',
+              v: 1,
+              depth: 0,
+              data: {
+                nameFull: "Rudy Alan Cruysbergs"
+              },
+              dataDiff: {
+                nameFull: "Rudy Alan Cruysbergs"
+              },
+              dataDiffPrepatched: null,
+              dataOld: {
+                "age": 30,
+                "id": 1,
+                "nameFirst": "Rudy",
+                "nameLast": "Cruysbergs"
+              }
+            },
+            outData: { conditionResult: true },
+            errorMessage: ''
+          },
+          {
+            id: 3,
+            action: 1,
+            stage: 3,
+            isError: false,
+            inData: {
+              trigger: 'T1',
+              v: 1,
+              depth: 0,
+              data: {
+                nameFull: "Rudy Alan Cruysbergs"
+              },
+              dataDiff: {
+                nameFull: "Rudy Alan Cruysbergs"
+              },
+              dataDiffPrepatched: null,
+              dataOld: {
+                "age": 30,
+                "id": 1,
+                "nameFirst": "Rudy",
+                "nameLast": "Cruysbergs"
+              }
+            },
+            outData: {
+              triggerPatch: {
+                nameFirst: "Rudy Alan",
+                nameLast: "Cruysbergs"
+              }
+            },
+            errorMessage: ''
+          }
+        ]
+      },
+      {
+        title: "INSERT with cascading triggers, second trigger doesn't patch",
+        blank: {
+          type: Action.ACTION_TYPE.INSERT,
+          schemaKey: "person",
+          data: {
+            nameFull: "Rudy Cruysbergs"
+          }
+        },
+        triggers: [
+          {
+            key: "T1",
+            condition: ["nameFirst"],
+            patch: (action, instance) => ({
+              nameFull: `${instance.nameFirst} ${instance.nameLast || ""}`.trim()
+            })
+          },
+          {
+            key: "T2",
+            condition: ["nameFull"],
+            patch: (action, instance) => {
+              const parts = instance.nameFull.split(/\s/);
+              return {
+                nameFirst: parts.slice(0, parts.length - 1).join(" "),
+                nameLast: parts[parts.length - 1]
+              }
+            }
+          }
+        ],
+        dataDiffPrepatched: {
+          nameFirst: "Rudy",
+          nameLast: "Cruysbergs",
+          nameFull: "Rudy Cruysbergs"
+        },
+        dbLogEvents: [
+          {
+            id: 1,
+            action: 1,
+            stage: Event.EVENT_STAGE.PREPATCH_CHECKING,
+            isError: false,
+            inData: {
+              trigger: 'T2',
+              v: 1,
+              depth: 0,
+              data: {
+                nameFull: "Rudy Cruysbergs"
+              },
+              dataDiff: null,
+              dataDiffPrepatched: null,
+              dataOld: null
+            },
+            outData: { conditionResult: true },
+            errorMessage: ''
+          },
+          {
+            id: 2,
+            action: 1,
+            stage: Event.EVENT_STAGE.PREPATCH_PERFORMING,
+            isError: false,
+            inData: {
+              trigger: 'T2',
+              v: 1,
+              depth: 0,
+              data: {
+                nameFull: "Rudy Cruysbergs"
+              },
+              dataDiff: null,
+              dataDiffPrepatched: null,
+              dataOld: null
+            },
+            outData: {
+              triggerPatch: {
+                nameFirst: "Rudy",
+                nameLast: "Cruysbergs"
+              }
+            },
+            errorMessage: ''
+          },
+          {
+            action: 1,
+            errorMessage: "",
+            id: 3,
+            inData: {
+              data: {
+                nameFull: "Rudy Cruysbergs"
+              },
+              dataDiff: null,
+              dataDiffPrepatched: {
+                nameFirst: "Rudy",
+                nameFull: "Rudy Cruysbergs",
+                nameLast: "Cruysbergs"
+              },
+              dataOld: null,
+              depth: 1,
+              trigger: "T1",
+              v: 1
+            },
+            isError: false,
+            outData: {
+              conditionResult: true
+            },
+            stage: Event.EVENT_STAGE.PREPATCH_CHECKING
+          },
+          {
+            action: 1,
+            errorMessage: "",
+            id: 4,
+            inData: {
+              data: {
+                nameFull: "Rudy Cruysbergs"
+              },
+              dataDiff: null,
+              dataDiffPrepatched: {
+                nameFirst: "Rudy",
+                nameFull: "Rudy Cruysbergs",
+                nameLast: "Cruysbergs"
+              },
+              dataOld: null,
+              depth: 1,
+              trigger: "T1",
+              v: 1
+            },
+            isError: false,
+            outData: {
+              triggerPatch: {
+                nameFull: "Rudy Cruysbergs"
+              }
+            },
+            stage: Event.EVENT_STAGE.PREPATCH_PERFORMING
+          }
+        ]
+      },
+      {
+        title: "INSERT with cascading triggers, second trigger patches",
+        blank: {
+          type: Action.ACTION_TYPE.INSERT,
+          schemaKey: "person",
+          data: {
+            nameFirst: "Rudy Alan",
+            nameLast: "Cruysbergs",
+            age: 40
+          }
+        },
+        triggers: [
+          {
+            key: "T1",
+            condition: ["nameFirst", "nameLast"],
+            patch: (action, instance) => ({
+              nameFull: `${instance.nameFirst} ${instance.nameLast || ""}`.trim()
+            })
+          },
+          {
+            key: "T2",
+            condition: ["nameFull"],
+            patch: (action, instance) => ({
+              summary: `${instance.nameFull}, ${instance.age}`
+            })
+          }
+        ],
+        dataDiffPrepatched: {
+          nameFirst: "Rudy Alan",
+          nameLast: "Cruysbergs",
+          age: 40,
+          nameFull: "Rudy Alan Cruysbergs",
+          summary:  "Rudy Alan Cruysbergs, 40"
+        },
+        dbLogEvents: [
+          {
+            id: 1,
+            action: 1,
+            stage: Event.EVENT_STAGE.PREPATCH_CHECKING,
+            isError: false,
+            inData: {
+              trigger: 'T1',
+              v: 1,
+              depth: 0,
+              data: {
+                nameFirst: "Rudy Alan",
+                nameLast: "Cruysbergs",
+                age: 40
+              },
+              dataDiff: null,
+              dataDiffPrepatched: null,
+              dataOld: null
+            },
+            outData: { conditionResult: true },
+            errorMessage: ''
+          },
+          {
+            id: 2,
+            action: 1,
+            stage: Event.EVENT_STAGE.PREPATCH_PERFORMING,
+            isError: false,
+            inData: {
+              trigger: 'T1',
+              v: 1,
+              depth: 0,
+              data: {
+                nameFirst: "Rudy Alan",
+                nameLast: "Cruysbergs",
+                age: 40
+              },
+              dataDiff: null,
+              dataDiffPrepatched: null,
+              dataOld: null
+            },
+            outData: {
+              triggerPatch: {
+                nameFull: "Rudy Alan Cruysbergs"
+              }
+            },
+            errorMessage: ''
+          },
+          {
+            action: 1,
+            errorMessage: "",
+            id: 3,
+            inData: {
+              data: {
+                nameFirst: "Rudy Alan",
+                nameLast: "Cruysbergs",
+                age: 40
+              },
+              dataDiff: null,
+              dataDiffPrepatched: {
+                nameFirst: "Rudy Alan",
+                nameLast: "Cruysbergs",
+                nameFull: "Rudy Alan Cruysbergs",
+                age: 40
+              },
+              dataOld: null,
+              depth: 1,
+              trigger: "T2",
+              v: 1
+            },
+            isError: false,
+            outData: {
+              conditionResult: true
+            },
+            stage: Event.EVENT_STAGE.PREPATCH_CHECKING
+          },
+          {
+            action: 1,
+            errorMessage: "",
+            id: 4,
+            inData: {
+              data: {
+                nameFirst: "Rudy Alan",
+                nameLast: "Cruysbergs",
+                age: 40
+              },
+              dataDiff: null,
+              dataDiffPrepatched: {
+                nameFirst: "Rudy Alan",
+                nameLast: "Cruysbergs",
+                nameFull: "Rudy Alan Cruysbergs",
+                age: 40
+              },
+              dataOld: null,
+              depth: 1,
+              trigger: "T2",
+              v: 1
+            },
+            isError: false,
+            outData: {
+              triggerPatch: {
+                summary: "Rudy Alan Cruysbergs, 40"
+              }
+            },
+            stage: Event.EVENT_STAGE.PREPATCH_PERFORMING
+          }
+        ]
+      },
+      {
+        title: "INSERT with failure on checking stage",
+        blank: {
+          type: Action.ACTION_TYPE.INSERT,
+          schemaKey: "person",
+          data: {
+            nameFirst: "Rudy"
+          }
+        },
+        triggers: [
+          {
+            key: "T1",
+            condition: action => { throw new Error("Custom message") },
+            patch: (action, instance) => ({})
+          }
+        ],
+        isError: true,
+        error: "Custom message",
+        dbLogEvents: [
+          {
+            id: 1,
+            action: 1,
+            stage: Event.EVENT_STAGE.PREPATCH_CHECKING,
+            isError: true,
+            errorMessage: 'Custom message',
+            inData: {
+              data: { nameFirst: "Rudy" },
+              dataDiff: null,
+              dataDiffPrepatched: null,
+              dataOld: null,
+              depth: 0,
+              trigger: "T1",
+              v: 1
+            },
+            outData: {}
+          }
+        ]
+      },
+      {
+        title: "INSERT with failure on performing stage",
+        blank: {
+          type: Action.ACTION_TYPE.INSERT,
+          schemaKey: "person",
+          data: {
+            nameFirst: "Rudy"
+          }
+        },
+        triggers: [
+          {
+            key: "T1",
+            condition: ["nameFirst"],
+            patch: (action, instance) => { throw new Error("Custom message") }
+          }
+        ],
+        isError: true,
+        error: "Custom message",
+        dbLogEvents: [
+          {
+            id: 1,
+            action: 1,
+            stage: Event.EVENT_STAGE.PREPATCH_CHECKING,
+            isError: false,
+            inData: {
+              trigger: 'T1',
+              v: 1,
+              depth: 0,
+              data: {
+                nameFirst: "Rudy"
+              },
+              dataDiff: null,
+              dataDiffPrepatched: null,
+              dataOld: null
+            },
+            outData: { conditionResult: true },
+            errorMessage: ''
+          },
+          {
+            id: 2,
+            action: 1,
+            stage: Event.EVENT_STAGE.PREPATCH_PERFORMING,
+            isError: true,
+            errorMessage: 'Custom message',
+            inData: {
+              data: { nameFirst: "Rudy" },
+              dataDiff: null,
+              dataDiffPrepatched: null,
+              dataOld: null,
+              depth: 0,
+              trigger: "T1",
+              v: 1
+            },
+            outData: {}
+          }
+        ]
+      }
+    ];
+
+    testCases.forEach(async (testCase) => {
+      it(testCase.title, async() => {
+        const core = await createCore();
+        testCase.triggers.forEach(trigger => core.hookPrepatch("person", trigger));
+
+        const action = new Action(testCase.blank);
+        await core.logger.logAction(action);
+
+        await action.populateWithOld(core);
+
+        if (testCase.error) {
+          await expect(action.performPrepatching(core)).rejects.toThrow(testCase.error);
+        } else {
+          await action.performPrepatching(core);
+          expect(action.dataDiffPrepatched).toStrictEqual(testCase.dataDiffPrepatched);
         }
 
         expect(core.logger.adapter.instances.event).toStrictEqual(
