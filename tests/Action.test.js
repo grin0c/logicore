@@ -311,7 +311,7 @@ describe('Action', () => {
           {
             id: 1,
             action: 1,
-            stage: 2,
+            stage: Event.EVENT_STAGE.PREPATCH_CHECKING,
             isError: false,
             inData: {
               trigger: 'T1',
@@ -332,7 +332,7 @@ describe('Action', () => {
           {
             id: 2,
             action: 1,
-            stage: 3,
+            stage: Event.EVENT_STAGE.PREPATCH_PERFORMING,
             isError: false,
             inData: {
               trigger: 'T1',
@@ -387,7 +387,7 @@ describe('Action', () => {
           {
             id: 1,
             action: 1,
-            stage: 1,
+            stage: Event.EVENT_STAGE.POPULATING,
             isError: false,
             errorMessage: '',
             inData: { instanceId: 1, instanceFilter: null, data: { nameFull: "Rudy Alan Cruysbergs" } },
@@ -406,7 +406,7 @@ describe('Action', () => {
           {
             id: 2,
             action: 1,
-            stage: 2,
+            stage: Event.EVENT_STAGE.PREPATCH_CHECKING,
             isError: false,
             inData: {
               trigger: 'T1',
@@ -432,7 +432,7 @@ describe('Action', () => {
           {
             id: 3,
             action: 1,
-            stage: 3,
+            stage: Event.EVENT_STAGE.PREPATCH_PERFORMING,
             isError: false,
             inData: {
               trigger: 'T1',
@@ -843,9 +843,9 @@ describe('Action', () => {
         await action.populateWithOld(core);
 
         if (testCase.error) {
-          await expect(action.performPrepatching(core)).rejects.toThrow(testCase.error);
+          await expect(action.prepatch(core)).rejects.toThrow(testCase.error);
         } else {
-          await action.performPrepatching(core);
+          await action.prepatch(core);
           expect(action.dataDiffPrepatched).toStrictEqual(testCase.dataDiffPrepatched);
         }
 
@@ -854,5 +854,164 @@ describe('Action', () => {
         );
       });
     });
-  })
+  });
+  describe('validate', () => {
+    const testCases = [
+      {
+        title: "INSERT valid data",
+        blank: {
+          type: Action.ACTION_TYPE.INSERT,
+          schemaKey: "person",
+          data: {
+            nameFull: "Rudy Cruysbergs",
+            age: 40
+          }
+        },
+        dbLogEvents: [
+          {
+            id: 1,
+            action: 1,
+            stage: Event.EVENT_STAGE.VALIDATION,
+            isError: false,
+            inData: {
+              values: {
+                nameFull: "Rudy Cruysbergs",
+                age: 40
+              }
+            },
+            outData: {},
+            errorMessage: ''
+          }
+        ]
+      },
+      {
+        title: "INSERT into unexisting schema",
+        blank: {
+          type: Action.ACTION_TYPE.INSERT,
+          schemaKey: "person2",
+          data: {
+            nameFull: "Rudy Cruysbergs",
+            age: 40
+          }
+        },
+        isError: true,
+        error: "this.validators[schemaKey] is not a function",
+        dbLogEvents: [
+          {
+            id: 1,
+            action: 1,
+            stage: Event.EVENT_STAGE.VALIDATION,
+            isError: true,
+            inData: {
+              values: {
+                nameFull: "Rudy Cruysbergs",
+                age: 40
+              }
+            },
+            outData: {},
+            errorMessage: "this.validators[schemaKey] is not a function"
+          }
+        ]
+      },
+      {
+        title: "INSERT with missing required properties",
+        blank: {
+          type: Action.ACTION_TYPE.INSERT,
+          schemaKey: "person",
+          data: {
+            nameFirst: "Rudy",
+            age: 40
+          }
+        },
+        isError: true,
+        error: "Validation result error. See details in log.outData.",
+        dbLogEvents: [
+          {
+            id: 1,
+            action: 1,
+            stage: Event.EVENT_STAGE.VALIDATION,
+            isError: true,
+            inData: {
+              values: {
+                nameFirst: "Rudy",
+                age: 40
+              },
+              result: [
+                {
+                  "dataPath": "",
+                  "keyword": "required",
+                  "message": "should have required property 'nameFull'",
+                  "params": {
+                    "missingProperty": "nameFull"
+                  },
+                  "schemaPath": "#/required"
+               }
+              ]
+            },
+            outData: {},
+            errorMessage: "Validation result error. See details in log.outData."
+          }
+        ]
+      },
+      {
+        title: "INSERT with wrong type",
+        blank: {
+          type: Action.ACTION_TYPE.INSERT,
+          schemaKey: "person",
+          data: {
+            nameFull: "Rudy Cruysbergs",
+            age: "40"
+          }
+        },
+        isError: true,
+        error: "Validation result error. See details in log.outData.",
+        dbLogEvents: [
+          {
+            id: 1,
+            action: 1,
+            stage: Event.EVENT_STAGE.VALIDATION,
+            isError: true,
+            inData: {
+              values: {
+                nameFull: "Rudy Cruysbergs",
+                age: "40"
+              },
+              result: [
+                {
+                  "dataPath": ".age",
+                  "keyword": "type",
+                  "message": "should be integer",
+                  "params": {
+                    "type": "integer"
+                  },
+                  "schemaPath": "#/properties/age/type"
+                }
+              ]
+            },
+            outData: {},
+            errorMessage: "Validation result error. See details in log.outData."
+          }
+        ]
+      }
+    ];
+
+    testCases.forEach(async (testCase) => {
+      it(testCase.title, async() => {
+        const core = await createCore();
+
+        const action = new Action(testCase.blank);
+        await core.logger.logAction(action);
+
+        if (testCase.error) {
+          await expect(action.validate(core)).rejects.toThrow(testCase.error);
+        } else {
+          await action.validate(core);
+        }
+
+        expect(core.logger.adapter.instances.event).toStrictEqual(
+          testCase.dbLogEvents.map(eventBlank => new Event(eventBlank))
+        );
+      });
+    });
+  });
 });

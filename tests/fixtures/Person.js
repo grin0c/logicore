@@ -26,7 +26,8 @@ module.exports = {
         type: "string",
         description: "nameFull, age"
       }
-    }
+    },
+    required: ["nameFull"]
   },
   instances: [
     {
