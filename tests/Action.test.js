@@ -3,6 +3,7 @@ const Adapter = require('./fixtures/Adapter');
 const Action = require('../lib/Action');
 const Event = require('../lib/Event');
 const Core = require('../lib/Core');
+const _ = require('lodash');
 
 const createCore = async() => {
   const core = new Core({
@@ -18,7 +19,7 @@ const createCore = async() => {
 describe('Action', () => {
   describe('constructor', () => {
     describe('Should throw an error then given any of calculated props', () => {
-      const props = ["id", "dataOld", "dataDiff", "dataDiffPrepatched", "stage", "status"];
+      const props = ["id", "dataOld", "dataDiff", "dataDiffPrepatched", "dataResult", "status"];
       props.forEach((prop) => {
         it(prop, () => {
           expect(() => {
@@ -272,9 +273,7 @@ describe('Action', () => {
           expect(action.dataOld).toStrictEqual(testCase.populated.dataOld);
         }
 
-        expect(core.logger.adapter.instances.event).toStrictEqual(
-          testCase.dbLogEvents.map(eventBlank => new Event(eventBlank))
-        );
+        expect(core.logger.adapter.instances.event).toStrictEqual(testCase.dbLogEvents);
       });
     });
   });
@@ -849,9 +848,7 @@ describe('Action', () => {
           expect(action.dataDiffPrepatched).toStrictEqual(testCase.dataDiffPrepatched);
         }
 
-        expect(core.logger.adapter.instances.event).toStrictEqual(
-          testCase.dbLogEvents.map(eventBlank => new Event(eventBlank))
-        );
+        expect(core.logger.adapter.instances.event).toStrictEqual(testCase.dbLogEvents);
       });
     });
   });
@@ -1008,8 +1005,161 @@ describe('Action', () => {
           await action.validate(core);
         }
 
+        expect(core.logger.adapter.instances.event).toStrictEqual(testCase.dbLogEvents);
+      });
+    });
+  });
+  describe('perform', () => {
+    const testCases = [
+      {
+        title: "INSERT",
+        blank: {
+          type: Action.ACTION_TYPE.INSERT,
+          schemaKey: "person",
+          data: {
+            nameFull: "Rudy Cruysbergs",
+            age: 40
+          }
+        },
+        dataResult: {
+          nameFull: "Rudy Cruysbergs",
+          age: 40
+        },
+        dbLogEvents: [
+          {
+            id: 1,
+            action: 1,
+            stage: Event.EVENT_STAGE.PERFORMING,
+            isError: false,
+            inData: {
+              values: {
+                nameFull: "Rudy Cruysbergs",
+                age: 40
+              }
+            },
+            outData: {
+              dataResult: {
+                nameFull: "Rudy Cruysbergs",
+                age: 40
+              }
+            },
+            errorMessage: ''
+          }
+        ]
+      },
+      {
+        title: "UPDATE",
+        blank: {
+          type: Action.ACTION_TYPE.UPDATE,
+          schemaKey: "person",
+          instanceId: 1,
+          data: {
+            age: 50
+          }
+        },
+        actionPatch: {
+          dataOld: {
+            nameFirst: "Rudy",
+            nameLast: "Cruysbergs",
+            age: 30
+          }
+        },
+        dataResult: {
+          nameFirst: "Rudy",
+          nameLast: "Cruysbergs",
+          age: 50
+        },
+        dbLogEvents: [
+          {
+            id: 1,
+            action: 1,
+            stage: Event.EVENT_STAGE.PERFORMING,
+            isError: false,
+            inData: {
+              values: {
+                nameFirst: "Rudy",
+                nameLast: "Cruysbergs",
+                age: 50
+              }
+            },
+            outData: {
+              dataResult: {
+                nameFirst: "Rudy",
+                nameLast: "Cruysbergs",
+                age: 50
+              }
+            },
+            errorMessage: ""
+          }
+        ]
+      },
+      {
+        title: "UPDATE with unexisting id",
+        blank: {
+          type: Action.ACTION_TYPE.UPDATE,
+          schemaKey: "person",
+          instanceId: 1000,
+          data: {
+            age: 50
+          }
+        },
+        actionPatch: {
+          dataOld: {
+            nameFirst: "Rudy",
+            nameLast: "Cruysbergs",
+            age: 30
+          }
+        },
+        error: 'Item not found {"id":1000}',
+        dbLogEvents: [
+          {
+            id: 1,
+            action: 1,
+            stage: Event.EVENT_STAGE.PERFORMING,
+            isError: true,
+            inData: {
+              values: {
+                nameFirst: "Rudy",
+                nameLast: "Cruysbergs",
+                age: 50
+              }
+            },
+            outData: {},
+            errorMessage: 'Item not found {"id":1000}'
+          }
+        ]
+      }
+    ];
+
+    testCases.forEach(async (testCase) => {
+      it(testCase.title, async() => {
+        const core = await createCore();
+
+        const action = new Action(testCase.blank);
+        Object.assign(action, testCase.actionPatch);
+        await core.logger.logAction(action);
+
+        if (testCase.error) {
+          await expect(action.perform(core)).rejects.toThrow(testCase.error);
+        } else {
+          await action.perform(core);
+          const dataResultWithoutId = _.omit(action.dataResult, "id");
+          expect(dataResultWithoutId).toStrictEqual(testCase.dataResult);
+        }
+
         expect(core.logger.adapter.instances.event).toStrictEqual(
-          testCase.dbLogEvents.map(eventBlank => new Event(eventBlank))
+          testCase.dbLogEvents.map((eventBlank, index) => {
+            const expectedEvent = eventBlank;
+            const existingEvent = core.logger.adapter.instances.event[index];
+            if (existingEvent
+              && existingEvent.outData
+              && existingEvent.outData.dataResult
+              && existingEvent.outData.dataResult.id
+            ) {
+              expectedEvent.outData.dataResult.id = existingEvent.outData.dataResult.id
+            }
+            return expectedEvent;
+          })
         );
       });
     });

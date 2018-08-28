@@ -33,13 +33,17 @@ module.exports = class Adapter {
 
   async insert(schemaKey, data) {
     const instances = this.instances[schemaKey];
-    data.id = this.idPool[schemaKey]++;
-    instances.push(data);
+    const dataToInsert = Object.assign({}, data, {
+      id: this.idPool[schemaKey]++
+    });
+    
+    instances.push(dataToInsert);
+    return dataToInsert;
   }
 
   async update(schemaKey, id, patch) {
     const instance = await this.findOne(schemaKey, { id });
-    Object.assign(instance, patch);
+    return Object.assign({}, instance, patch);
   }
 
   async findOne(schemaKey, filter) {
