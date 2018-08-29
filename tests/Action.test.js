@@ -174,7 +174,10 @@ describe('Action', () => {
             id: 1,
             nameFirst: "Rudy",
             nameLast: "Cruysbergs",
-            age: 30
+            nameFull: "Rudy Cruysbergs",
+            age: 30,
+            isBlocked: false,
+            activeCredentialsCount: 1
           },
           dataDiff: {
             age: 40
@@ -188,7 +191,15 @@ describe('Action', () => {
             isError: false,
             inData: { instanceId: 1, instanceFilter: null, data: { nameFirst: 'Rudy', age: 40 } },
             outData: {
-              dataOld: { id: 1, nameFirst: 'Rudy', nameLast: 'Cruysbergs', age: 30 },
+              dataOld: {
+                id: 1,
+                nameFirst: 'Rudy',
+                nameLast: 'Cruysbergs',
+                nameFull: "Rudy Cruysbergs",
+                age: 30,
+                isBlocked: false,
+                activeCredentialsCount: 1
+              },
               dataDiff: { age: 40 }
             },
             errorMessage: ''
@@ -235,7 +246,10 @@ describe('Action', () => {
             id: 1,
             nameFirst: "Rudy",
             nameLast: "Cruysbergs",
-            age: 30
+            nameFull: "Rudy Cruysbergs",
+            age: 30,
+            isBlocked: false,
+            activeCredentialsCount: 1
           },
           dataDiff: {
             nameFirst: "Rudy2"
@@ -249,7 +263,15 @@ describe('Action', () => {
             isError: false,
             inData: { instanceId: null, instanceFilter: { age: 30 }, data: { nameFirst: 'Rudy2', age: 30, nonExistingAttribute: 10 } },
             outData: {
-              dataOld: { id: 1, nameFirst: 'Rudy', nameLast: 'Cruysbergs', age: 30 },
+              dataOld: {
+                id: 1,
+                nameFirst: 'Rudy',
+                nameLast: 'Cruysbergs',
+                nameFull: "Rudy Cruysbergs",
+                age: 30,
+                isBlocked: false,
+                activeCredentialsCount: 1
+              },
               dataDiff: { nameFirst: "Rudy2" }
             },
             errorMessage: ''
@@ -391,14 +413,17 @@ describe('Action', () => {
             errorMessage: '',
             inData: { instanceId: 1, instanceFilter: null, data: { nameFull: "Rudy Alan Cruysbergs" } },
             outData: {
-              "dataDiff": {
-                "nameFull": "Rudy Alan Cruysbergs"
+              dataDiff: {
+                nameFull: "Rudy Alan Cruysbergs"
               },
-              "dataOld": {
-                "age": 30,
-                "id": 1,
-                "nameFirst": "Rudy",
-                "nameLast": "Cruysbergs"
+              dataOld: {
+                age: 30,
+                id: 1,
+                nameFirst: "Rudy",
+                nameLast: "Cruysbergs",
+                nameFull: "Rudy Cruysbergs",
+                isBlocked: false,
+                activeCredentialsCount: 1
               }
             }
           },
@@ -419,10 +444,13 @@ describe('Action', () => {
               },
               dataDiffPrepatched: null,
               dataOld: {
-                "age": 30,
-                "id": 1,
-                "nameFirst": "Rudy",
-                "nameLast": "Cruysbergs"
+                age: 30,
+                id: 1,
+                nameFirst: "Rudy",
+                nameLast: "Cruysbergs",
+                nameFull: "Rudy Cruysbergs",
+                isBlocked: false,
+                activeCredentialsCount: 1
               }
             },
             outData: { conditionResult: true },
@@ -445,10 +473,13 @@ describe('Action', () => {
               },
               dataDiffPrepatched: null,
               dataOld: {
-                "age": 30,
-                "id": 1,
-                "nameFirst": "Rudy",
-                "nameLast": "Cruysbergs"
+                age: 30,
+                id: 1,
+                nameFirst: "Rudy",
+                nameLast: "Cruysbergs",
+                nameFull: "Rudy Cruysbergs",
+                isBlocked: false,
+                activeCredentialsCount: 1
               }
             },
             outData: {
@@ -1061,13 +1092,19 @@ describe('Action', () => {
           dataOld: {
             nameFirst: "Rudy",
             nameLast: "Cruysbergs",
-            age: 30
+            nameFull: "Rudy Cruysbergs",
+            age: 30,
+            isBlocked: false,
+            activeCredentialsCount: 1
           }
         },
         dataResult: {
           nameFirst: "Rudy",
           nameLast: "Cruysbergs",
-          age: 50
+          nameFull: "Rudy Cruysbergs",
+          age: 50,
+          isBlocked: false,
+          activeCredentialsCount: 1
         },
         dbLogEvents: [
           {
@@ -1076,9 +1113,7 @@ describe('Action', () => {
             stage: Event.EVENT_STAGE.PERFORMING,
             isError: false,
             inData: {
-              values: {
-                nameFirst: "Rudy",
-                nameLast: "Cruysbergs",
+              diff: {
                 age: 50
               }
             },
@@ -1086,7 +1121,10 @@ describe('Action', () => {
               dataResult: {
                 nameFirst: "Rudy",
                 nameLast: "Cruysbergs",
-                age: 50
+                nameFull: "Rudy Cruysbergs",
+                age: 50,
+                isBlocked: false,
+                activeCredentialsCount: 1
               }
             },
             errorMessage: ""
@@ -1118,14 +1156,49 @@ describe('Action', () => {
             stage: Event.EVENT_STAGE.PERFORMING,
             isError: true,
             inData: {
-              values: {
-                nameFirst: "Rudy",
-                nameLast: "Cruysbergs",
+              diff: {
                 age: 50
               }
             },
             outData: {},
             errorMessage: 'Item not found {"id":1000}'
+          }
+        ]
+      },
+      {
+        title: "UPDATE with no changes",
+        blank: {
+          type: Action.ACTION_TYPE.UPDATE,
+          schemaKey: "person",
+          instanceId: 1,
+          data: {
+            age: 30
+          }
+        },
+        actionPatch: {
+          dataOld: {
+            nameFirst: "Rudy",
+            nameLast: "Cruysbergs",
+            age: 30
+          },
+          dataDiff: {},
+          dataDiffPrepatched: {}
+        },
+        dataResult: null,
+        status: Action.ACTION_TYPE.SKIPPED,
+        dbLogEvents: [
+          {
+            id: 1,
+            action: 1,
+            stage: Event.EVENT_STAGE.PERFORMING,
+            isError: false,
+            inData: {
+              diff: {}
+            },
+            outData: {
+              dataResult: null
+            },
+            errorMessage: ""
           }
         ]
       }
@@ -1143,8 +1216,11 @@ describe('Action', () => {
           await expect(action.perform(core)).rejects.toThrow(testCase.error);
         } else {
           await action.perform(core);
-          const dataResultWithoutId = _.omit(action.dataResult, "id");
+          const dataResultWithoutId = action.dataResult && _.omit(action.dataResult, "id");
           expect(dataResultWithoutId).toStrictEqual(testCase.dataResult);
+          if (testCase.status) {
+            expect(action.status).toStrictEqual(testCase.status);
+          }
         }
 
         expect(core.logger.adapter.instances.event).toStrictEqual(

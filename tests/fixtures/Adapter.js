@@ -1,7 +1,8 @@
 const _ = require("lodash");
 
 const INSTANCES = {
-  person: require("./Person.js").instances
+  person: require("./Person.js").instances,
+  credential: require("./Credential.js").instances
 };
   
 module.exports = class Adapter {
@@ -43,7 +44,7 @@ module.exports = class Adapter {
 
   async update(schemaKey, id, patch) {
     const instance = await this.findOne(schemaKey, { id });
-    return Object.assign({}, instance, patch);
+    return Object.assign(instance, patch);
   }
 
   async findOne(schemaKey, filter) {
@@ -54,6 +55,16 @@ module.exports = class Adapter {
 
       if (!item) { reject(new Error(`Item not found ${JSON.stringify(filter)}`)); }
       resolve(item);
+    });
+  }
+
+  async find(schemaKey, filter) {
+    this._registerCall("db.find", [schemaKey, filter]);
+    return new Promise((resolve, reject) => {
+      const instances = this.instances[schemaKey];
+      const items = instances.filter(instance => Object.keys(filter).every(key => instance[key] === filter[key]))
+
+      resolve(items);
     });
   }
 };

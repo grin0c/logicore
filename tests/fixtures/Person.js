@@ -25,6 +25,14 @@ module.exports = {
       summary: {
         type: "string",
         description: "nameFull, age"
+      },
+      isBlocked: {
+        type: "boolean",
+        description: "Is person blocked"
+      },
+      activeCredentialsCount: {
+        type: "integer",
+        description: "How many active credentials the person has"
       }
     },
     required: ["nameFull"]
@@ -34,7 +42,10 @@ module.exports = {
       id: 1,
       nameFirst: "Rudy",
       nameLast: "Cruysbergs",
-      age: 30
+      nameFull: "Rudy Cruysbergs",
+      age: 30,
+      isBlocked: false,
+      activeCredentialsCount: 1
     }
   ]
 };
