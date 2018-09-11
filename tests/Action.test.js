@@ -295,7 +295,7 @@ describe('Action', () => {
           expect(action.dataOld).toStrictEqual(testCase.populated.dataOld);
         }
 
-        expect(core.logger.adapter.instances.event).toStrictEqual(testCase.dbLogEvents);
+        expect(core.logger.adapter.instances.event.map(event => _.omit(event, "errorStack"))).toStrictEqual(testCase.dbLogEvents);
       });
     });
   });
@@ -879,7 +879,7 @@ describe('Action', () => {
           expect(action.dataDiffPrepatched).toStrictEqual(testCase.dataDiffPrepatched);
         }
 
-        expect(core.logger.adapter.instances.event).toStrictEqual(testCase.dbLogEvents);
+        expect(core.logger.adapter.instances.event.map(event => _.omit(event, "errorStack"))).toStrictEqual(testCase.dbLogEvents);
       });
     });
   });
@@ -1036,7 +1036,7 @@ describe('Action', () => {
           await action.validate(core);
         }
 
-        expect(core.logger.adapter.instances.event).toStrictEqual(testCase.dbLogEvents);
+        expect(core.logger.adapter.instances.event.map(event => _.omit(event, "errorStack"))).toStrictEqual(testCase.dbLogEvents);
       });
     });
   });
@@ -1223,7 +1223,7 @@ describe('Action', () => {
           }
         }
 
-        expect(core.logger.adapter.instances.event).toStrictEqual(
+        expect(core.logger.adapter.instances.event.map(event => _.omit(event, "errorStack"))).toStrictEqual(
           testCase.dbLogEvents.map((eventBlank, index) => {
             const expectedEvent = eventBlank;
             const existingEvent = core.logger.adapter.instances.event[index];

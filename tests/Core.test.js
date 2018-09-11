@@ -98,8 +98,11 @@ describe('Core', () => {
               isBlocked: false,
               isUserBlocked: true
             },
+            dataResultId: 1,
             status: Action.ACTION_STATUS.COMPLETED,
-            depth: 1
+            depth: 1,
+            metaKey: null,
+            metaData: null
           },
           {
             id: 3,
@@ -131,7 +134,10 @@ describe('Core', () => {
               isBlocked: true,
               activeCredentialsCount: 0
             },
-            status: 10
+            dataResultId: 1,
+            status: 10,
+            metaKey: null,
+            metaData: null
           }
         ]
       }

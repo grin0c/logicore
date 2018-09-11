@@ -13,7 +13,9 @@ module.exports = class Adapter {
     this.schemas = {};
   }
 
-  init() {}
+  init() {
+    return Promise.resolve();
+  }
 
   _registerCall(title, args) {
     this.calls.push({ title, args });
