@@ -1,7 +1,0 @@
-{
-  "env": {
-    "test": {
-      "presets": ["jest", "stage-0"]
-    }
-  }
-}
