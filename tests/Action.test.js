@@ -1,36 +1,36 @@
+const _ = require("lodash");
 const Person = require("./fixtures/Person.js");
-const Adapter = require('./fixtures/Adapter');
-const Action = require('../lib/Action');
-const Event = require('../lib/Event');
-const Core = require('../lib/Core');
-const _ = require('lodash');
+const Adapter = require("./fixtures/Adapter");
+const Action = require("../lib/Action");
+const Event = require("../lib/Event");
+const Core = require("../lib/Core");
 
-const createCore = async() => {
+const createCore = async () => {
   const core = new Core({
     dbAdapter: new Adapter(),
     dbLogAdapter: new Adapter()
   });
-  await core.init();
 
   core.registerSchema("person", Person.schema);
   return core;
 };
 
-describe('Action', () => {
-  describe('constructor', () => {
-    describe('Should throw an error then given any of calculated props', () => {
+describe("Action", () => {
+  describe("constructor", () => {
+    describe("Should throw an error then given any of calculated props", () => {
       const props = ["id", "dataOld", "dataDiff", "dataDiffPrepatched", "dataResult", "status"];
-      props.forEach((prop) => {
+      props.forEach(prop => {
         it(prop, () => {
           expect(() => {
+            // eslint-disable-next-line no-new
             new Action({
               [prop]: 1
-            })
+            });
           }).toThrow(/should be empty/i);
         });
       });
     });
-    describe('Other wrong arguments', () => {
+    describe("Other wrong arguments", () => {
       const testCases = [
         {
           title: "Wrong type",
@@ -59,27 +59,48 @@ describe('Action', () => {
         },
         {
           title: "INSERT: instanceId present",
-          blank: { type: Action.ACTION_TYPE.INSERT, schemaKey: "s1", data: {}, instanceId: 1 },
+          blank: {
+            type: Action.ACTION_TYPE.INSERT,
+            schemaKey: "s1",
+            data: {},
+            instanceId: 1
+          },
           error: /Action\.instanceId should be empty for INSERT type/
         },
         {
           title: "INSERT: instanceFilter present",
-          blank: { type: Action.ACTION_TYPE.INSERT, schemaKey: "s1", data: {}, instanceFilter: {} },
+          blank: {
+            type: Action.ACTION_TYPE.INSERT,
+            schemaKey: "s1",
+            data: {},
+            instanceFilter: {}
+          },
           error: /Action\.instanceFilter should be empty for INSERT type/
         },
         {
           title: "UPDATE: no instanceId",
-          blank: { type: Action.ACTION_TYPE.UPDATE, schemaKey: "s1", data: {}},
+          blank: { type: Action.ACTION_TYPE.UPDATE, schemaKey: "s1", data: {} },
           error: /Action\.instanceId is required for UPDATE type/
         },
         {
           title: "UPDATE: instanceFilter present",
-          blank: { type: Action.ACTION_TYPE.UPDATE, schemaKey: "s1", data: {}, instanceId: 1, instanceFilter: {} },
+          blank: {
+            type: Action.ACTION_TYPE.UPDATE,
+            schemaKey: "s1",
+            data: {},
+            instanceId: 1,
+            instanceFilter: {}
+          },
           error: /Action\.instanceFilter should be empty for UPDATE type/
         },
         {
           title: "UPSERT: instanceId present",
-          blank: { type: Action.ACTION_TYPE.UPSERT, schemaKey: "s1", data: {}, instanceId: 1 },
+          blank: {
+            type: Action.ACTION_TYPE.UPSERT,
+            schemaKey: "s1",
+            data: {},
+            instanceId: 1
+          },
           error: /Action\.instanceId should be empty for UPSERT type/
         },
         {
@@ -89,23 +110,33 @@ describe('Action', () => {
         },
         {
           title: "UPSERT: instanceFilter not an object",
-          blank: { type: Action.ACTION_TYPE.UPSERT, schemaKey: "s1", data: {}, instanceFilter: 1 },
+          blank: {
+            type: Action.ACTION_TYPE.UPSERT,
+            schemaKey: "s1",
+            data: {},
+            instanceFilter: 1
+          },
           error: /Action\.instanceFilter should be an object/
         }
       ];
-      testCases.forEach((testCase) => {
+      testCases.forEach(testCase => {
         it(testCase.title, () => {
           expect(() => {
-            new Action(testCase.blank)
+            // eslint-disable-next-line no-new
+            new Action(testCase.blank);
           }).toThrow(testCase.error);
         });
       });
     });
-    describe('Successful cases', () => {
+    describe("Successful cases", () => {
       const testCases = [
         {
           title: "INSERT",
-          blank: { type: Action.ACTION_TYPE.INSERT, schemaKey: "s1", data: { a1: "v1" } },
+          blank: {
+            type: Action.ACTION_TYPE.INSERT,
+            schemaKey: "s1",
+            data: { a1: "v1" }
+          },
           result: {
             type: Action.ACTION_TYPE.INSERT,
             status: Action.ACTION_STATUS.PENDING,
@@ -114,7 +145,12 @@ describe('Action', () => {
         },
         {
           title: "UPDATE",
-          blank: { type: Action.ACTION_TYPE.UPDATE, schemaKey: "s1", data: { a1: "v1" }, instanceId: 1 },
+          blank: {
+            type: Action.ACTION_TYPE.UPDATE,
+            schemaKey: "s1",
+            data: { a1: "v1" },
+            instanceId: 1
+          },
           result: {
             type: Action.ACTION_TYPE.UPDATE,
             status: Action.ACTION_STATUS.PENDING,
@@ -124,7 +160,12 @@ describe('Action', () => {
         },
         {
           title: "UPSERT",
-          blank: { type: Action.ACTION_TYPE.UPSERT, schemaKey: "s1", data: { a1: "v1" }, instanceFilter: { key: 2 } },
+          blank: {
+            type: Action.ACTION_TYPE.UPSERT,
+            schemaKey: "s1",
+            data: { a1: "v1" },
+            instanceFilter: { key: 2 }
+          },
           result: {
             type: Action.ACTION_TYPE.UPSERT,
             status: Action.ACTION_STATUS.PENDING,
@@ -133,14 +174,14 @@ describe('Action', () => {
           }
         }
       ];
-      testCases.forEach((testCase) => {
+      testCases.forEach(testCase => {
         it(testCase.title, () => {
           expect(new Action(testCase.blank)).toMatchObject(testCase.result);
         });
       });
     });
   });
-  describe('populateWithOld', () => {
+  describe("populateWithOld", () => {
     const testCases = [
       {
         title: "INSERT",
@@ -187,14 +228,19 @@ describe('Action', () => {
           {
             id: 1,
             action: 1,
+            attempt: 0,
             stage: 1,
             isError: false,
-            inData: { instanceId: 1, instanceFilter: null, data: { nameFirst: 'Rudy', age: 40 } },
+            inData: {
+              instanceId: 1,
+              instanceFilter: null,
+              data: { nameFirst: "Rudy", age: 40 }
+            },
             outData: {
               dataOld: {
                 id: 1,
-                nameFirst: 'Rudy',
-                nameLast: 'Cruysbergs',
+                nameFirst: "Rudy",
+                nameLast: "Cruysbergs",
                 nameFull: "Rudy Cruysbergs",
                 age: 30,
                 isBlocked: false,
@@ -202,7 +248,7 @@ describe('Action', () => {
               },
               dataDiff: { age: 40 }
             },
-            errorMessage: ''
+            errorMessage: ""
           }
         ]
       },
@@ -221,9 +267,10 @@ describe('Action', () => {
           {
             id: 1,
             action: 1,
+            attempt: 0,
             stage: 1,
             isError: true,
-            errorMessage: 'Item not found {"id":10000}',
+            errorMessage: `Item not found {"id":10000}`,
             inData: { instanceId: 10000, instanceFilter: null, data: { age: 40 } },
             outData: {}
           }
@@ -259,14 +306,19 @@ describe('Action', () => {
           {
             id: 1,
             action: 1,
+            attempt: 0,
             stage: 1,
             isError: false,
-            inData: { instanceId: null, instanceFilter: { age: 30 }, data: { nameFirst: 'Rudy2', age: 30, nonExistingAttribute: 10 } },
+            inData: {
+              instanceId: null,
+              instanceFilter: { age: 30 },
+              data: { nameFirst: "Rudy2", age: 30, nonExistingAttribute: 10 }
+            },
             outData: {
               dataOld: {
                 id: 1,
-                nameFirst: 'Rudy',
-                nameLast: 'Cruysbergs',
+                nameFirst: "Rudy",
+                nameLast: "Cruysbergs",
                 nameFull: "Rudy Cruysbergs",
                 age: 30,
                 isBlocked: false,
@@ -274,15 +326,15 @@ describe('Action', () => {
               },
               dataDiff: { nameFirst: "Rudy2" }
             },
-            errorMessage: ''
+            errorMessage: ""
           }
         ]
       }
     ];
 
     // TODO: test failed action creation in CORE (proper events)
-    testCases.forEach(async (testCase) => {
-      it(testCase.title, async() => {
+    testCases.forEach(async testCase => {
+      it(testCase.title, async () => {
         const core = await createCore();
 
         const action = new Action(testCase.blank);
@@ -295,12 +347,14 @@ describe('Action', () => {
           expect(action.dataOld).toStrictEqual(testCase.populated.dataOld);
         }
 
-        expect(core.logger.adapter.instances.event.map(event => _.omit(event, "errorStack"))).toStrictEqual(testCase.dbLogEvents);
+        expect(core.logger.adapter.instances.event.map(event => _.omit(event, "errorStack"))).toStrictEqual(
+          testCase.dbLogEvents
+        );
       });
     });
   });
 
-  describe('prepatch', () => {
+  describe("prepatch", () => {
     const testCases = [
       {
         title: "INSERT array condition",
@@ -332,10 +386,11 @@ describe('Action', () => {
           {
             id: 1,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.PREPATCH_CHECKING,
             isError: false,
             inData: {
-              trigger: 'T1',
+              trigger: "T1",
               v: 1,
               depth: 0,
               data: {
@@ -348,15 +403,16 @@ describe('Action', () => {
               dataOld: null
             },
             outData: { conditionResult: true },
-            errorMessage: ''
+            errorMessage: ""
           },
           {
             id: 2,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.PREPATCH_PERFORMING,
             isError: false,
             inData: {
-              trigger: 'T1',
+              trigger: "T1",
               v: 1,
               depth: 0,
               data: {
@@ -373,7 +429,7 @@ describe('Action', () => {
                 nameFull: "Rudy Cruysbergs"
               }
             },
-            errorMessage: ''
+            errorMessage: ""
           }
         ]
       },
@@ -390,13 +446,13 @@ describe('Action', () => {
         triggers: [
           {
             key: "T1",
-            condition: action => action.getFreshestDiff().hasOwnProperty("nameFull"),
+            condition: action => Object.prototype.hasOwnProperty.call(action.getFreshestDiff(), "nameFull"),
             patch: (action, instance) => {
               const parts = instance.nameFull.split(/\s/);
               return {
                 nameFirst: parts.slice(0, parts.length - 1).join(" "),
                 nameLast: parts[parts.length - 1]
-              }
+              };
             }
           }
         ],
@@ -408,10 +464,15 @@ describe('Action', () => {
           {
             id: 1,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.POPULATING,
             isError: false,
-            errorMessage: '',
-            inData: { instanceId: 1, instanceFilter: null, data: { nameFull: "Rudy Alan Cruysbergs" } },
+            errorMessage: "",
+            inData: {
+              instanceId: 1,
+              instanceFilter: null,
+              data: { nameFull: "Rudy Alan Cruysbergs" }
+            },
             outData: {
               dataDiff: {
                 nameFull: "Rudy Alan Cruysbergs"
@@ -430,10 +491,11 @@ describe('Action', () => {
           {
             id: 2,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.PREPATCH_CHECKING,
             isError: false,
             inData: {
-              trigger: 'T1',
+              trigger: "T1",
               v: 1,
               depth: 0,
               data: {
@@ -454,15 +516,16 @@ describe('Action', () => {
               }
             },
             outData: { conditionResult: true },
-            errorMessage: ''
+            errorMessage: ""
           },
           {
             id: 3,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.PREPATCH_PERFORMING,
             isError: false,
             inData: {
-              trigger: 'T1',
+              trigger: "T1",
               v: 1,
               depth: 0,
               data: {
@@ -488,7 +551,7 @@ describe('Action', () => {
                 nameLast: "Cruysbergs"
               }
             },
-            errorMessage: ''
+            errorMessage: ""
           }
         ]
       },
@@ -517,7 +580,7 @@ describe('Action', () => {
               return {
                 nameFirst: parts.slice(0, parts.length - 1).join(" "),
                 nameLast: parts[parts.length - 1]
-              }
+              };
             }
           }
         ],
@@ -530,10 +593,11 @@ describe('Action', () => {
           {
             id: 1,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.PREPATCH_CHECKING,
             isError: false,
             inData: {
-              trigger: 'T2',
+              trigger: "T2",
               v: 1,
               depth: 0,
               data: {
@@ -544,15 +608,16 @@ describe('Action', () => {
               dataOld: null
             },
             outData: { conditionResult: true },
-            errorMessage: ''
+            errorMessage: ""
           },
           {
             id: 2,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.PREPATCH_PERFORMING,
             isError: false,
             inData: {
-              trigger: 'T2',
+              trigger: "T2",
               v: 1,
               depth: 0,
               data: {
@@ -568,10 +633,11 @@ describe('Action', () => {
                 nameLast: "Cruysbergs"
               }
             },
-            errorMessage: ''
+            errorMessage: ""
           },
           {
             action: 1,
+            attempt: 0,
             errorMessage: "",
             id: 3,
             inData: {
@@ -597,6 +663,7 @@ describe('Action', () => {
           },
           {
             action: 1,
+            attempt: 0,
             errorMessage: "",
             id: 4,
             inData: {
@@ -656,16 +723,17 @@ describe('Action', () => {
           nameLast: "Cruysbergs",
           age: 40,
           nameFull: "Rudy Alan Cruysbergs",
-          summary:  "Rudy Alan Cruysbergs, 40"
+          summary: "Rudy Alan Cruysbergs, 40"
         },
         dbLogEvents: [
           {
             id: 1,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.PREPATCH_CHECKING,
             isError: false,
             inData: {
-              trigger: 'T1',
+              trigger: "T1",
               v: 1,
               depth: 0,
               data: {
@@ -678,15 +746,16 @@ describe('Action', () => {
               dataOld: null
             },
             outData: { conditionResult: true },
-            errorMessage: ''
+            errorMessage: ""
           },
           {
             id: 2,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.PREPATCH_PERFORMING,
             isError: false,
             inData: {
-              trigger: 'T1',
+              trigger: "T1",
               v: 1,
               depth: 0,
               data: {
@@ -703,10 +772,11 @@ describe('Action', () => {
                 nameFull: "Rudy Alan Cruysbergs"
               }
             },
-            errorMessage: ''
+            errorMessage: ""
           },
           {
             action: 1,
+            attempt: 0,
             errorMessage: "",
             id: 3,
             inData: {
@@ -735,6 +805,7 @@ describe('Action', () => {
           },
           {
             action: 1,
+            attempt: 0,
             errorMessage: "",
             id: 4,
             inData: {
@@ -777,8 +848,10 @@ describe('Action', () => {
         triggers: [
           {
             key: "T1",
-            condition: action => { throw new Error("Custom message") },
-            patch: (action, instance) => ({})
+            condition: () => {
+              throw new Error("Custom message");
+            },
+            patch: () => ({})
           }
         ],
         isError: true,
@@ -787,9 +860,10 @@ describe('Action', () => {
           {
             id: 1,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.PREPATCH_CHECKING,
             isError: true,
-            errorMessage: 'Custom message',
+            errorMessage: "Custom message",
             inData: {
               data: { nameFirst: "Rudy" },
               dataDiff: null,
@@ -816,7 +890,9 @@ describe('Action', () => {
           {
             key: "T1",
             condition: ["nameFirst"],
-            patch: (action, instance) => { throw new Error("Custom message") }
+            patch: () => {
+              throw new Error("Custom message");
+            }
           }
         ],
         isError: true,
@@ -825,10 +901,11 @@ describe('Action', () => {
           {
             id: 1,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.PREPATCH_CHECKING,
             isError: false,
             inData: {
-              trigger: 'T1',
+              trigger: "T1",
               v: 1,
               depth: 0,
               data: {
@@ -839,14 +916,15 @@ describe('Action', () => {
               dataOld: null
             },
             outData: { conditionResult: true },
-            errorMessage: ''
+            errorMessage: ""
           },
           {
             id: 2,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.PREPATCH_PERFORMING,
             isError: true,
-            errorMessage: 'Custom message',
+            errorMessage: "Custom message",
             inData: {
               data: { nameFirst: "Rudy" },
               dataDiff: null,
@@ -862,8 +940,8 @@ describe('Action', () => {
       }
     ];
 
-    testCases.forEach(async (testCase) => {
-      it(testCase.title, async() => {
+    testCases.forEach(async testCase => {
+      it(testCase.title, async () => {
         const core = await createCore();
         testCase.triggers.forEach(trigger => core.hookPrepatch("person", trigger));
 
@@ -879,11 +957,13 @@ describe('Action', () => {
           expect(action.dataDiffPrepatched).toStrictEqual(testCase.dataDiffPrepatched);
         }
 
-        expect(core.logger.adapter.instances.event.map(event => _.omit(event, "errorStack"))).toStrictEqual(testCase.dbLogEvents);
+        expect(core.logger.adapter.instances.event.map(event => _.omit(event, "errorStack"))).toStrictEqual(
+          testCase.dbLogEvents
+        );
       });
     });
   });
-  describe('validate', () => {
+  describe("validate", () => {
     const testCases = [
       {
         title: "INSERT valid data",
@@ -899,6 +979,7 @@ describe('Action', () => {
           {
             id: 1,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.VALIDATION,
             isError: false,
             inData: {
@@ -908,7 +989,7 @@ describe('Action', () => {
               }
             },
             outData: {},
-            errorMessage: ''
+            errorMessage: ""
           }
         ]
       },
@@ -917,6 +998,7 @@ describe('Action', () => {
         blank: {
           type: Action.ACTION_TYPE.INSERT,
           schemaKey: "person2",
+          attempt: 0,
           data: {
             nameFull: "Rudy Cruysbergs",
             age: 40
@@ -928,6 +1010,7 @@ describe('Action', () => {
           {
             id: 1,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.VALIDATION,
             isError: true,
             inData: {
@@ -957,6 +1040,7 @@ describe('Action', () => {
           {
             id: 1,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.VALIDATION,
             isError: true,
             inData: {
@@ -966,14 +1050,14 @@ describe('Action', () => {
               },
               result: [
                 {
-                  "dataPath": "",
-                  "keyword": "required",
-                  "message": "should have required property 'nameFull'",
-                  "params": {
-                    "missingProperty": "nameFull"
+                  dataPath: "",
+                  keyword: "required",
+                  message: "should have required property 'nameFull'",
+                  params: {
+                    missingProperty: "nameFull"
                   },
-                  "schemaPath": "#/required"
-               }
+                  schemaPath: "#/required"
+                }
               ]
             },
             outData: {},
@@ -997,6 +1081,7 @@ describe('Action', () => {
           {
             id: 1,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.VALIDATION,
             isError: true,
             inData: {
@@ -1006,13 +1091,13 @@ describe('Action', () => {
               },
               result: [
                 {
-                  "dataPath": ".age",
-                  "keyword": "type",
-                  "message": "should be integer",
-                  "params": {
-                    "type": "integer"
+                  dataPath: ".age",
+                  keyword: "type",
+                  message: "should be integer",
+                  params: {
+                    type: "integer"
                   },
-                  "schemaPath": "#/properties/age/type"
+                  schemaPath: "#/properties/age/type"
                 }
               ]
             },
@@ -1023,8 +1108,8 @@ describe('Action', () => {
       }
     ];
 
-    testCases.forEach(async (testCase) => {
-      it(testCase.title, async() => {
+    testCases.forEach(async testCase => {
+      it(testCase.title, async () => {
         const core = await createCore();
 
         const action = new Action(testCase.blank);
@@ -1036,11 +1121,13 @@ describe('Action', () => {
           await action.validate(core);
         }
 
-        expect(core.logger.adapter.instances.event.map(event => _.omit(event, "errorStack"))).toStrictEqual(testCase.dbLogEvents);
+        expect(core.logger.adapter.instances.event.map(event => _.omit(event, "errorStack"))).toStrictEqual(
+          testCase.dbLogEvents
+        );
       });
     });
   });
-  describe('perform', () => {
+  describe("perform", () => {
     const testCases = [
       {
         title: "INSERT",
@@ -1060,6 +1147,7 @@ describe('Action', () => {
           {
             id: 1,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.PERFORMING,
             isError: false,
             inData: {
@@ -1074,7 +1162,7 @@ describe('Action', () => {
                 age: 40
               }
             },
-            errorMessage: ''
+            errorMessage: ""
           }
         ]
       },
@@ -1110,6 +1198,7 @@ describe('Action', () => {
           {
             id: 1,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.PERFORMING,
             isError: false,
             inData: {
@@ -1148,11 +1237,12 @@ describe('Action', () => {
             age: 30
           }
         },
-        error: 'Item not found {"id":1000}',
+        error: `Item not found {"id":1000}`,
         dbLogEvents: [
           {
             id: 1,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.PERFORMING,
             isError: true,
             inData: {
@@ -1161,7 +1251,7 @@ describe('Action', () => {
               }
             },
             outData: {},
-            errorMessage: 'Item not found {"id":1000}'
+            errorMessage: `Item not found {"id":1000}`
           }
         ]
       },
@@ -1190,6 +1280,7 @@ describe('Action', () => {
           {
             id: 1,
             action: 1,
+            attempt: 0,
             stage: Event.EVENT_STAGE.PERFORMING,
             isError: false,
             inData: {
@@ -1204,8 +1295,8 @@ describe('Action', () => {
       }
     ];
 
-    testCases.forEach(async (testCase) => {
-      it(testCase.title, async() => {
+    testCases.forEach(async testCase => {
+      it(testCase.title, async () => {
         const core = await createCore();
 
         const action = new Action(testCase.blank);
@@ -1227,12 +1318,13 @@ describe('Action', () => {
           testCase.dbLogEvents.map((eventBlank, index) => {
             const expectedEvent = eventBlank;
             const existingEvent = core.logger.adapter.instances.event[index];
-            if (existingEvent
-              && existingEvent.outData
-              && existingEvent.outData.dataResult
-              && existingEvent.outData.dataResult.id
+            if (
+              existingEvent &&
+              existingEvent.outData &&
+              existingEvent.outData.dataResult &&
+              existingEvent.outData.dataResult.id
             ) {
-              expectedEvent.outData.dataResult.id = existingEvent.outData.dataResult.id
+              expectedEvent.outData.dataResult.id = existingEvent.outData.dataResult.id;
             }
             return expectedEvent;
           })

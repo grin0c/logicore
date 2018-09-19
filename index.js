@@ -1,6 +1,6 @@
 const Core = require("./lib/Core");
 
-module.exports = async (settings) => new Core(settings);
+module.exports = async settings => new Core(settings);
 module.exports.ACTION_TYPE = require("./lib/Action").ACTION_TYPE;
 module.exports.ACTION_STATUS = require("./lib/Action").ACTION_STATUS;
 module.exports.ACTION_SCHEMA = require("./lib/Action").ACTION_SCHEMA;

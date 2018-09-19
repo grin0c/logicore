@@ -1,25 +1,23 @@
+const _ = require("lodash");
 const Person = require("./fixtures/Person.js");
 const Credential = require("./fixtures/Credential.js");
-const Adapter = require('./fixtures/Adapter');
-const Action = require('../lib/Action');
-const Event = require('../lib/Event');
-const Core = require('../lib/Core');
-const _ = require('lodash');
+const Adapter = require("./fixtures/Adapter");
+const Action = require("../lib/Action");
+const Core = require("../lib/Core");
 
-const createCore = async() => {
+const createCore = async () => {
   const core = new Core({
     dbAdapter: new Adapter(),
     dbLogAdapter: new Adapter()
   });
-  await core.init();
 
   core.registerSchema("person", Person.schema);
   core.registerSchema("credential", Credential.schema);
   return core;
 };
 
-describe('Core', () => {
-  describe('commitAction', () => {
+describe("Core", () => {
+  describe("commitAction", () => {
     const testCases = [
       {
         title: "UPDATE",
@@ -37,7 +35,7 @@ describe('Core', () => {
               key: "Block credentials when user blocked",
               condition: ["isBlocked"],
               schemaKey: "person",
-              subactions: async function(action, instance) {
+              async subactions(action, instance) {
                 const credentials = await this.core.db.adapter.find("credential", { person: instance.id });
                 return credentials.map(credential => ({
                   type: Action.ACTION_TYPE.UPDATE,
@@ -53,19 +51,23 @@ describe('Core', () => {
               key: "Count active credentials",
               condition: ["isBlocked", "isUserBlocked"],
               schemaKey: "credential",
-              subactions: async function(action, instance) {
-                if (!instance.person) { return; }
+              async subactions(action, instance) {
+                if (!instance.person) {
+                  return undefined;
+                }
                 const credentials = await this.core.db.adapter.find("credential", {
                   person: instance.person,
                   isBlocked: false,
                   isUserBlocked: false
                 });
-                return [{
-                  type: Action.ACTION_TYPE.UPDATE,
-                  schemaKey: "person",
-                  instanceId: instance.person,
-                  data: { activeCredentialsCount: credentials.length }
-                }];
+                return [
+                  {
+                    type: Action.ACTION_TYPE.UPDATE,
+                    schemaKey: "person",
+                    instanceId: instance.person,
+                    data: { activeCredentialsCount: credentials.length }
+                  }
+                ];
               }
             }
           ]
@@ -102,7 +104,8 @@ describe('Core', () => {
             status: Action.ACTION_STATUS.COMPLETED,
             depth: 1,
             metaKey: null,
-            metaData: null
+            metaData: null,
+            attempt: 0
           },
           {
             id: 3,
@@ -110,15 +113,15 @@ describe('Core', () => {
             parent: 2,
             rootParent: 1,
             depth: 2,
-            schemaKey: 'person',
+            schemaKey: "person",
             instanceId: 1,
             instanceFilter: null,
             data: { activeCredentialsCount: 0 },
             dataOld: {
               id: 1,
-              nameFirst: 'Rudy',
-              nameLast: 'Cruysbergs',
-              nameFull: 'Rudy Cruysbergs',
+              nameFirst: "Rudy",
+              nameLast: "Cruysbergs",
+              nameFull: "Rudy Cruysbergs",
               age: 30,
               isBlocked: true,
               activeCredentialsCount: 1
@@ -127,9 +130,9 @@ describe('Core', () => {
             dataDiffPrepatched: null,
             dataResult: {
               id: 1,
-              nameFirst: 'Rudy',
-              nameLast: 'Cruysbergs',
-              nameFull: 'Rudy Cruysbergs',
+              nameFirst: "Rudy",
+              nameLast: "Cruysbergs",
+              nameFull: "Rudy Cruysbergs",
               age: 30,
               isBlocked: true,
               activeCredentialsCount: 0
@@ -137,14 +140,15 @@ describe('Core', () => {
             dataResultId: 1,
             status: 10,
             metaKey: null,
-            metaData: null
+            metaData: null,
+            attempt: 0
           }
         ]
       }
     ];
 
-    testCases.forEach(async (testCase) => {
-      it(testCase.title, async() => {
+    testCases.forEach(async testCase => {
+      it(testCase.title, async () => {
         const core = await createCore();
         _.each(testCase.triggers, (triggers, schemaKey) => {
           triggers.forEach(trigger => core.hookSubaction(schemaKey, trigger));
@@ -155,8 +159,9 @@ describe('Core', () => {
           await expect(action.prepatch(core)).rejects.toThrow(testCase.error);
         } else {
           await core.commitAction(action);
-          expect(core.logger.adapter.instances.action)
-            .toStrictEqual([Object.assign({}, action)].concat(testCase.subactions));
+          expect(core.logger.adapter.instances.action).toStrictEqual(
+            [Object.assign({}, action)].concat(testCase.subactions)
+          );
         }
       });
     });

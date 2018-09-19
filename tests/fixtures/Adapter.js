@@ -1,10 +1,12 @@
 const _ = require("lodash");
+const Person = require("./Person.js");
+const Credential = require("./Credential");
 
 const INSTANCES = {
-  person: require("./Person.js").instances,
-  credential: require("./Credential.js").instances
+  person: Person.instances,
+  credential: Credential.instances
 };
-  
+
 module.exports = class Adapter {
   constructor() {
     this.calls = [];
@@ -13,33 +15,32 @@ module.exports = class Adapter {
     this.schemas = {};
   }
 
-  init() {
-    return Promise.resolve();
-  }
-
   _registerCall(title, args) {
     this.calls.push({ title, args });
   }
 
   registerSchema(schemaKey, schema) {
-    this.instances[schemaKey] = INSTANCES[schemaKey]
-      ? _.clone(INSTANCES[schemaKey])
-      : [];
-    this.idPool[schemaKey] = _.reduce(this.instances[schemaKey], (nextFreeId, instance) => {
-      if (Number(instance.id) >= nextFreeId) {
-        return Number(instance.id) + 1;
-      }
-      return nextFreeId;
-    }, 1);
+    this.instances[schemaKey] = INSTANCES[schemaKey] ? _.clone(INSTANCES[schemaKey]) : [];
+    this.idPool[schemaKey] = _.reduce(
+      this.instances[schemaKey],
+      (nextFreeId, instance) => {
+        if (Number(instance.id) >= nextFreeId) {
+          return Number(instance.id) + 1;
+        }
+        return nextFreeId;
+      },
+      1
+    );
     this.schemas[schemaKey] = schema;
   }
 
   async insert(schemaKey, data) {
     const instances = this.instances[schemaKey];
     const dataToInsert = Object.assign({}, data, {
+      // eslint-disable-next-line no-plusplus
       id: this.idPool[schemaKey]++
     });
-    
+
     instances.push(dataToInsert);
     return dataToInsert;
   }
@@ -53,18 +54,20 @@ module.exports = class Adapter {
     this._registerCall("db.findOne", [schemaKey, filter]);
     return new Promise((resolve, reject) => {
       const instances = this.instances[schemaKey];
-      const item = instances.find(instance => Object.keys(filter).every(key => instance[key] === filter[key]))
+      const item = instances.find(instance => Object.keys(filter).every(key => instance[key] === filter[key]));
 
-      if (!item) { reject(new Error(`Item not found ${JSON.stringify(filter)}`)); }
+      if (!item) {
+        reject(new Error(`Item not found ${JSON.stringify(filter)}`));
+      }
       resolve(item);
     });
   }
 
   async find(schemaKey, filter) {
     this._registerCall("db.find", [schemaKey, filter]);
-    return new Promise((resolve, reject) => {
+    return new Promise(resolve => {
       const instances = this.instances[schemaKey];
-      const items = instances.filter(instance => Object.keys(filter).every(key => instance[key] === filter[key]))
+      const items = instances.filter(instance => Object.keys(filter).every(key => instance[key] === filter[key]));
 
       resolve(items);
     });
